@@ -102,7 +102,7 @@ class CutMixGenerator():
         if self.cutmix_in_train:
             # data, (targets, shuffled_targets, lam)
             data, targets, shuffled_targets, lam = self.cutmix((X, y), self.alpha, reshape_size)
-            return [data, shuffled_targets, lam], targets
+            return [data, targets, shuffled_targets, lam], targets
         else:
             return [X, np.zeros((reshape_size, 196)), np.zeros((reshape_size, 1))], y
 

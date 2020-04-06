@@ -60,12 +60,13 @@ class Lam_Loss(keras.layers.Layer):
 
     def call(self, inputs):
         loss = 0
-        targets, shuffled_targets, lam = inputs
+
+        output, targets, shuffled_targets, lam = inputs
         enable_loss = tf.cond(tf.count_nonzero(shuffled_targets) > 0, lambda: True, lambda: False)
 
         loss = tf.cond(enable_loss,
-                       lambda: lam * categorical_crossentropy(targets, shuffled_targets) * (
-                                   1 - lam) * categorical_crossentropy(targets, shuffled_targets), lambda: 0.)
+                       lambda: lam * categorical_crossentropy(targets, output) + (
+                                   1 - lam) * categorical_crossentropy(shuffled_targets, output), lambda: 0.)
         self.add_loss(loss)
 
         return loss
@@ -74,16 +75,18 @@ class Lam_Loss(keras.layers.Layer):
 def create_model(BASE_MODEL, training=True):
     if training:
         image = Input((299, 299, 3))
+        targets = Input((196, ))
         shuffled_targets = Input((196,))
         lam = Input((1,))
     else:
         image = Input((299, 299, 3))
-    return create_base_model([image, shuffled_targets, lam], BASE_MODEL, training)
+    return create_base_model([image, targets, shuffled_targets, lam], BASE_MODEL, training)
 
 
 def create_base_model(inputs, BASE_MODEL, training=True):
+    # data, targets, shuffled_targets, lam
     if training and (len(inputs) > 1):
-        image, shuffled_targets, lam = inputs
+        image, targets, shuffled_targets, lam = inputs
         loss = Lam_Loss()
     else:
         image = inputs
@@ -100,7 +103,7 @@ def create_base_model(inputs, BASE_MODEL, training=True):
     x = Dense(196, activation='softmax')(x)
 
     if (training):
-        lam_loss = loss([x, shuffled_targets, lam])
+        lam_loss = loss([x, targets, shuffled_targets, lam])
 
     model = Model(inputs=inputs, outputs=x)
     if (training):
